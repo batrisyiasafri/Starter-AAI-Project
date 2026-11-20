@@ -24,19 +24,19 @@ Do Low only if time is left, and only if you ask.
 | Done | 9 | Refresh the session on activity | High | AC-09 (sliding part) |
 | Done | 10 | Make `/` redirect | Medium | U11 / design rule 10 |
 | Done | 11 | Full pass against the acceptance checklist | High | AC-01 … AC-13, `npm run lint` |
-| To do | 12 | LeaveRequest table + migration | High | leave design §1 (setup) |
-| To do | 13 | Status/type constants + status chip | High | leave design §1, LR-5 |
-| To do | 14 | Employee leave form + submit checks | High | AC-14 (form), AC-15, AC-16, AC-17, AC-18, AC-29 |
-| To do | 15 | Employee's own list on `/employee` | High | AC-14 (list), AC-26 (employee) |
-| To do | 16 | Request detail page + access matrix | High | AC-26, AC-31, AC-28 (confirm part) |
-| To do | 17 | Withdraw | High | AC-18 (frees dates), AC-25, AC-28 |
-| To do | 18 | Supervisor list on `/supervisor` | High | AC-26 (supervisor) |
-| To do | 19 | Supervisor signs or rejects | High | AC-19, AC-20, AC-28 |
-| To do | 20 | Send to HR | High | AC-21 |
-| To do | 21 | HR shared queue on `/hr` | High | AC-21 (both officers), AC-27 |
-| To do | 22 | HR decides + first decision wins | High | AC-22, AC-23, AC-24, AC-28 |
-| To do | 23 | Admin table (view only) | Medium | AC-30 |
-| To do | 24 | Full pass against the leave checklist | High | AC-14 … AC-31, `npm run lint` |
+| Done | 12 | LeaveRequest table + migration | High | leave design §1 (setup) |
+| Done | 13 | Status/type constants + status chip | High | leave design §1, LR-5 |
+| Done | 14 | Employee leave form + submit checks | High | AC-14 (form), AC-15, AC-16, AC-17, AC-18, AC-29 |
+| Done | 15 | Employee's own list on `/employee` | High | AC-14 (list), AC-26 (employee) |
+| Done | 16 | Request detail page + access matrix | High | AC-26, AC-31, AC-28 (confirm part) |
+| Done | 17 | Withdraw | High | AC-18 (frees dates), AC-25, AC-28 |
+| Done | 18 | Supervisor list on `/supervisor` | High | AC-26 (supervisor) |
+| Done | 19 | Supervisor signs or rejects | High | AC-19, AC-20, AC-28 |
+| Done | 20 | Send to HR | High | AC-21 |
+| Done | 21 | HR shared queue on `/hr` | High | AC-21 (both officers), AC-27 |
+| Done | 22 | HR decides + first decision wins | High | AC-22, AC-23, AC-24, AC-28 |
+| Done | 23 | Admin table (view only) | Medium | AC-30 |
+| Done | 24 | Full pass against the leave checklist | High | AC-14 … AC-31, `npm run lint` |
 
 ---
 
