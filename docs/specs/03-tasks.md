@@ -13,17 +13,17 @@ Do Low only if time is left, and only if you ask.
 
 | Status | # | Task | Priority | Checks (from requirements §4) |
 |--------|---|------|----------|-------------------------------|
-| To do | 1 | Set up the database and the `User` table | High | Design §1 + AC-13 (setup) |
-| To do | 2 | Seed the 6 demo users | High | AC-13, AC-10 (setup) |
-| To do | 3 | Build the `/login` screen (form only) | High | AC-07 (form side), U1 (visible part) |
-| To do | 4 | Sign and verify sessions (library) | High | AC-09 (sign/verify part), design §2 rules 6, 8 |
-| To do | 5 | Role home stubs + signed-out redirects | High | AC-04, AC-03 (unsigned part) |
-| To do | 6 | Log in: server action, session, errors | High | AC-01, AC-02, AC-06, AC-07, AC-11, AC-12, AC-10 |
-| To do | 7 | Lock the account after 5 wrong passwords | High | AC-08 |
-| To do | 8 | Log out | High | AC-05 |
-| To do | 9 | Refresh the session on activity | High | AC-09 (sliding part) |
-| To do | 10 | Make `/` redirect | Medium | U11 / design rule 10 |
-| To do | 11 | Full pass against the acceptance checklist | High | AC-01 … AC-13, `npm run lint` |
+| Done | 1 | Set up the database and the `User` table | High | Design §1 + AC-13 (setup) |
+| Done | 2 | Seed the 6 demo users | High | AC-13, AC-10 (setup) |
+| Done | 3 | Build the `/login` screen (form only) | High | AC-07 (form side), U1 (visible part) |
+| Done | 4 | Sign and verify sessions (library) | High | AC-09 (sign/verify part), design §2 rules 6, 8 |
+| Done | 5 | Role home stubs + signed-out redirects | High | AC-04, AC-03 (unsigned part) |
+| Done | 6 | Log in: server action, session, errors | High | AC-01, AC-02, AC-06, AC-07, AC-11, AC-12, AC-10 |
+| Done | 7 | Lock the account after 5 wrong passwords | High | AC-08 |
+| Done | 8 | Log out | High | AC-05 |
+| Done | 9 | Refresh the session on activity | High | AC-09 (sliding part) |
+| Done | 10 | Make `/` redirect | Medium | U11 / design rule 10 |
+| Done | 11 | Full pass against the acceptance checklist | High | AC-01 … AC-13, `npm run lint` |
 
 ---
 

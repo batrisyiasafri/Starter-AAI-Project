@@ -59,19 +59,19 @@ Demo accounts (doc 7.2): `employee-1@budiman.com`, `supervisor-1@budiman.com`,
 
 | Status | ID | Check | How to test |
 |--------|----|-------|-------------|
-| To do | AC-01 (U1) | Correct email + password logs the user in | • Open `/login`<br>• Sign in as `employee-1@budiman.com` / `password123`<br>• You should land on `/employee` showing "Employee 1", role *Employee*, division *Finance*, and a Logout button |
-| To do | AC-02 (U2) | Each role lands on its own home page | • Log out, then sign in as `supervisor-1@budiman.com` → `/supervisor`; `hr-1@budiman.com` → `/hr`; `admin@budiman.com` → `/admin`. Each page shows that user's name, role and division |
-| To do | AC-03 (U3) | Another role's pages are blocked | • Signed in as `employee-1@budiman.com`, open `/admin` directly<br>• You should be denied (redirected to `/employee` or shown an access-denied page), **not** see the Admin home |
-| To do | AC-04 (U4) | Unsigned visitors cannot use the system | • Log out (or delete the session cookie)<br>• Open `/employee`, `/hr` and `/admin` directly<br>• Each should redirect to `/login` |
-| To do | AC-05 (U5) | Logout ends the session | • Sign in, click Logout<br>• You should be back at `/login`<br>• Press the browser Back button — you should **not** get back into a page; pressing a home-page URL should redirect to `/login` |
-| To do | AC-06 (U6) | Wrong credentials give one generic error, no user enumeration | • Open `/login`<br>• Try `employee-1@budiman.com` / `wrongpass` — note the error<br>• Try `nobody@budiman.com` / `password123` — the error must be **the same wording** |
-| To do | AC-07 (U6) | Only `@budiman.com` emails are accepted | • Open `/login`<br>• Try `someone@gmail.com` / any password<br>• You should see a validation message that the email must end with `@budiman.com` (this fires before the password check, so it is allowed to be specific) |
-| To do | AC-08 (U7) | 5 wrong passwords lock the account for 15 minutes | • As `employee-1@budiman.com`, enter a wrong password 5 times<br>• On the 6th attempt you should see a "try again later" message instead of the password check<br>• Sign in as `supervisor-1@budiman.com` — still works (lockout is per account, not system-wide) |
-| To do | AC-09 (U8) | Sessions last 8 hours, refreshed on activity | • Sign in, note the session cookie's expiry in the browser dev tools: about 8 hours ahead, `httpOnly`, `sameSite=Lax`<br>• Reload a page — the expiry should move ~8 hours ahead again<br>• Manually set the cookie's expiry in the past, reload → redirected to `/login` |
-| To do | AC-10 (U9) | All 6 demo accounts work | • Sign in once as each of the 6 demo users with `password123`<br>• Each lands on the home page of the role listed in section 2 |
-| To do | AC-11 (U10) | Email is trimmed and lowercased | • Sign in as `  EMPLOYEE-1@BUDIMAN.COM ` (spaces and capitals)<br>• You should land on `/employee` |
-| To do | AC-12 (U11) | Signed-in users are bounced off `/login` | • While signed in, open `/login`<br>• You should be redirected to your role's home page |
-| To do | AC-13 (U6, security) | Passwords are stored hashed, never plain text | • Open the SQLite database file and look at the users table<br>• The password column should show bcrypt hashes (`$2…` strings), and a search for `password123` should find nothing |
+| Done | AC-01 (U1) | Correct email + password logs the user in | • Open `/login`<br>• Sign in as `employee-1@budiman.com` / `password123`<br>• You should land on `/employee` showing "Employee 1", role *Employee*, division *Finance*, and a Logout button |
+| Done | AC-02 (U2) | Each role lands on its own home page | • Log out, then sign in as `supervisor-1@budiman.com` → `/supervisor`; `hr-1@budiman.com` → `/hr`; `admin@budiman.com` → `/admin`. Each page shows that user's name, role and division |
+| Done | AC-03 (U3) | Another role's pages are blocked | • Signed in as `employee-1@budiman.com`, open `/admin` directly<br>• You should be denied (redirected to `/employee` or shown an access-denied page), **not** see the Admin home |
+| Done | AC-04 (U4) | Unsigned visitors cannot use the system | • Log out (or delete the session cookie)<br>• Open `/employee`, `/hr` and `/admin` directly<br>• Each should redirect to `/login` |
+| Done | AC-05 (U5) | Logout ends the session | • Sign in, click Logout<br>• You should be back at `/login`<br>• Press the browser Back button — you should **not** get back into a page; pressing a home-page URL should redirect to `/login` |
+| Done | AC-06 (U6) | Wrong credentials give one generic error, no user enumeration | • Open `/login`<br>• Try `employee-1@budiman.com` / `wrongpass` — note the error<br>• Try `nobody@budiman.com` / `password123` — the error must be **the same wording** |
+| Done | AC-07 (U6) | Only `@budiman.com` emails are accepted | • Open `/login`<br>• Try `someone@gmail.com` / any password<br>• You should see a validation message that the email must end with `@budiman.com` (this fires before the password check, so it is allowed to be specific) |
+| Done | AC-08 (U7) | 5 wrong passwords lock the account for 15 minutes | • As `employee-1@budiman.com`, enter a wrong password 5 times<br>• On the 6th attempt you should see a "try again later" message instead of the password check<br>• Sign in as `supervisor-1@budiman.com` — still works (lockout is per account, not system-wide) |
+| Done | AC-09 (U8) | Sessions last 8 hours, refreshed on activity | • Sign in, note the session cookie's expiry in the browser dev tools: about 8 hours ahead, `httpOnly`, `sameSite=Lax`<br>• Reload a page — the expiry should move ~8 hours ahead again<br>• Manually set the cookie's expiry in the past, reload → redirected to `/login` |
+| Done | AC-10 (U9) | All 6 demo accounts work | • Sign in once as each of the 6 demo users with `password123`<br>• Each lands on the home page of the role listed in section 2 |
+| Done | AC-11 (U10) | Email is trimmed and lowercased | • Sign in as `  EMPLOYEE-1@BUDIMAN.COM ` (spaces and capitals)<br>• You should land on `/employee` |
+| Done | AC-12 (U11) | Signed-in users are bounced off `/login` | • While signed in, open `/login`<br>• You should be redirected to your role's home page |
+| Done | AC-13 (U6, security) | Passwords are stored hashed, never plain text | • Open the SQLite database file and look at the users table<br>• The password column should show bcrypt hashes (`$2…` strings), and a search for `password123` should find nothing |
 
 ## 5. Not included (for now)
 

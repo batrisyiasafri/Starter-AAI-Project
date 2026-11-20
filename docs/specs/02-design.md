@@ -116,6 +116,37 @@ Fixed by HRMS doc 7.1 and `package.json` (pinned — do not upgrade):
 
 There are deliberately no other routes in this module.
 
+### Visual design (reference: `src/image/login.webp`)
+
+The workshop reference image sets the look for every screen. It changes
+appearance only — routes, actions, checks and wording of messages are
+untouched.
+
+- **Palette:** page background `#eef0ee` with a few soft translucent circle
+  shapes; card `#fafbfa`; borders `#dfe3df`; main text `#1f2937`, secondary
+  text `#6b7280`; primary green `#23a55a` (hover `#1c8b4b`); error text stays
+  red for legibility.
+- **Shapes:** cards are rounded 24 px (`rounded-3xl`) with a soft shadow and
+  a hairline border; text inputs and the primary button are pills
+  (`rounded-full`); info tiles are `rounded-2xl`. System sans font.
+- **`/login`:** a centred, wide two-panel card. Left panel is decorative —
+  green dot + "Budiman HRMS" wordmark top-left and a soft cluster of circles
+  where the mockup's illustration sits (pure CSS, no image assets). Right
+  panel: "Login" heading, subtitle giving the `@budiman.com` hint, Email
+  label + pill input, Password label + pill input with a show/hide eye, and
+  the green pill submit button labelled "Sign in". Error and locked messages
+  render as plain red text above the button.
+- **Role homes:** same shell — background, centred card. Header row inside
+  the card: wordmark left, "Log out" pill button (outline style) right. Body:
+  the person's name as heading, three info tiles (Role, Division,
+  Designation), and the "leave requests come in the next task" placeholder
+  tile.
+- **Deliberately not copied from the mockup** (requirements §5 exclusions,
+  confirmed in interview): Google/GitHub buttons, "Reset Password",
+  Terms/Privacy links and the sign-up line — they have no behaviour, so they
+  are omitted rather than faked. The mockup's "Continue" label stays "Sign
+  in", which is the wording the test contract and the requirements use.
+
 ## 5. Where the code lives
 
 | Folder / file | What's in it |
