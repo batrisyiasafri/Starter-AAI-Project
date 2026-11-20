@@ -24,4 +24,35 @@ model User {
   createdAt      DateTime  @default(now())
   failedAttempts Int       @default(0) // wrong-password count (lockout, design §2 rule 5)
   lockedUntil    DateTime? // when a lockout ends; null = not locked
+
+  // Leave module (leave design §1): the three links a request keeps to Users.
+  submittedRequests  LeaveRequest[] @relation("LeaveEmployee")
+  supervisedRequests LeaveRequest[] @relation("LeaveSupervisor")
+  decidedRequests    LeaveRequest[] @relation("LeaveHrOfficer")
+}
+
+// One row per leave request (leave design §1, doc 7.2).
+// status/leaveType are plain strings — SQLite has no enum; the allowed
+// values live in src/lib/leave.ts and every write goes through the
+// server-side checks (LR rules).
+model LeaveRequest {
+  id               Int       @id @default(autoincrement())
+  employeeId       Int
+  supervisorId     Int
+  leaveType        String
+  otherLeaveType   String? // required when OTHER or COMPASSIONATE (LR-3)
+  startDate        DateTime
+  endDate          DateTime // never before startDate (LR-3)
+  status           String // seven values, set by the server only (LR-5)
+  supervisorRemark String? // required on supervisor reject (LR-6)
+  hrOfficerId      Int? // the HR user who decided (FR-05)
+  hrRemark         String? // required on HR reject (LR-9)
+  submittedAt      DateTime  @default(now())
+  signedAt         DateTime?
+  decidedAt        DateTime?
+  withdrawnAt      DateTime?
+
+  employee   User  @relation("LeaveEmployee", fields: [employeeId], references: [id])
+  supervisor User  @relation("LeaveSupervisor", fields: [supervisorId], references: [id])
+  hrOfficer  User? @relation("LeaveHrOfficer", fields: [hrOfficerId], references: [id])
 }

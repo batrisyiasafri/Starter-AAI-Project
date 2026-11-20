@@ -7,6 +7,10 @@ import { seed } from '../prisma/seed'
 const prisma = new PrismaClient()
 
 before(async () => {
+  // Rows written by other suites may still reference these users
+  // (employeeId/supervisorId/hrOfficerId) — clear them or the wipe below
+  // dies on a foreign key.
+  await prisma.leaveRequest.deleteMany()
   await prisma.user.deleteMany()
   await seed()
 })
@@ -45,6 +49,15 @@ test('empty or malformed input is rejected, not a crash', async () => {
 test('a deleted user cannot log in', async () => {
   const employee = await prisma.user.findUniqueOrThrow({
     where: { email: 'hr-2@budiman.com' },
+  })
+  await prisma.leaveRequest.deleteMany({
+    where: {
+      OR: [
+        { employeeId: employee.id },
+        { supervisorId: employee.id },
+        { hrOfficerId: employee.id },
+      ],
+    },
   })
   await prisma.user.delete({ where: { id: employee.id } })
   const result = await authenticateUser('hr-2@budiman.com', 'password123')

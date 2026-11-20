@@ -16,6 +16,8 @@ const DEMO_EMAILS = [
 ]
 
 test('seeding loads exactly the 6 demo users from doc 7.2', async () => {
+  // Leave rows left by other suites would block the user wipe (FK).
+  await prisma.leaveRequest.deleteMany()
   await prisma.user.deleteMany()
   await seed()
   const users = await prisma.user.findMany({ orderBy: { email: 'asc' } })
@@ -26,6 +28,8 @@ test('seeding loads exactly the 6 demo users from doc 7.2', async () => {
 })
 
 test('passwords are stored as bcrypt hashes, never as password123', async () => {
+  // Leave rows left by other suites would block the user wipe (FK).
+  await prisma.leaveRequest.deleteMany()
   await prisma.user.deleteMany()
   await seed()
   const users = await prisma.user.findMany()
@@ -40,6 +44,8 @@ test('passwords are stored as bcrypt hashes, never as password123', async () => 
 })
 
 test('the demo password is password123 (verifies against the hash)', async () => {
+  // Leave rows left by other suites would block the user wipe (FK).
+  await prisma.leaveRequest.deleteMany()
   await prisma.user.deleteMany()
   await seed()
   const user = await prisma.user.findUniqueOrThrow({
@@ -49,6 +55,8 @@ test('the demo password is password123 (verifies against the hash)', async () =>
 })
 
 test('re-running the seed does not duplicate rows (upsert by email)', async () => {
+  // Leave rows left by other suites would block the user wipe (FK).
+  await prisma.leaveRequest.deleteMany()
   await prisma.user.deleteMany()
   await seed()
   await seed()

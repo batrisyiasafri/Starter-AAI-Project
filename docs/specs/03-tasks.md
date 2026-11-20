@@ -24,6 +24,19 @@ Do Low only if time is left, and only if you ask.
 | Done | 9 | Refresh the session on activity | High | AC-09 (sliding part) |
 | Done | 10 | Make `/` redirect | Medium | U11 / design rule 10 |
 | Done | 11 | Full pass against the acceptance checklist | High | AC-01 … AC-13, `npm run lint` |
+| Done | 12 | LeaveRequest table + migration | High | leave design §1 (setup) |
+| Done | 13 | Status/type constants + status chip | High | leave design §1, LR-5 |
+| Done | 14 | Employee leave form + submit checks | High | AC-14 (form), AC-15, AC-16, AC-17, AC-18, AC-29 |
+| Done | 15 | Employee's own list on `/employee` | High | AC-14 (list), AC-26 (employee) |
+| Done | 16 | Request detail page + access matrix | High | AC-26, AC-31, AC-28 (confirm part) |
+| Done | 17 | Withdraw | High | AC-18 (frees dates), AC-25, AC-28 |
+| Done | 18 | Supervisor list on `/supervisor` | High | AC-26 (supervisor) |
+| Done | 19 | Supervisor signs or rejects | High | AC-19, AC-20, AC-28 |
+| Done | 20 | Send to HR | High | AC-21 |
+| Done | 21 | HR shared queue on `/hr` | High | AC-21 (both officers), AC-27 |
+| Done | 22 | HR decides + first decision wins | High | AC-22, AC-23, AC-24, AC-28 |
+| Done | 23 | Admin table (view only) | Medium | AC-30 |
+| Done | 24 | Full pass against the leave checklist | High | AC-14 … AC-31, `npm run lint` |
 
 ---
 
@@ -153,3 +166,247 @@ Do Low only if time is left, and only if you ask.
   • Delete the SQLite file, re-run Tasks 1–2's commands, sign in, and walk AC-01 … AC-13 top to bottom with the demo accounts, ticking each "To do" to Done.
   • `npm run lint` reports no errors.
   • Traces to: FR-01, FR-10; the whole of requirements §4.
+
+---
+
+# Leave Request – Tasks
+
+> The build order for the Leave Request part of the specs. **AC-nn from
+> AC-14 upward** refers to the Leave Request acceptance checklist in
+> `01-requirements.md`; **LR-n** refers to the business rules in the Leave
+> Request part of `02-design.md`. Same rules as the login tasks: build one
+> task at a time, in order, High first; fix the spec first if behaviour was
+> wrong; one conventional commit per task.
+
+## Task 12 – LeaveRequest table + migration *(High)*
+
+> The module needs somewhere to keep requests before anything else exists.
+
+- **Goal:** A `LeaveRequest` model with every field from leave design §1
+  (status, type, dates, remarks, officer id, the four timestamps) and
+  relations to `User`, created by a real migration. `status` and `leaveType`
+  are plain strings in SQLite — values are enforced in code from Task 13 on.
+- **Files:** `prisma/schema.prisma`; new migration folder under
+  `prisma/migrations/`.
+- **Check:**
+  • `npx prisma migrate dev --name leave_request` reports the migration applied.
+  • In `npx prisma studio`, `LeaveRequest` shows all 15 fields including
+    `employeeId`, `supervisorId`, `hrOfficerId`.
+  • A throwaway `npx tsx` snippet creates one row (annual leave, two dates,
+    status `PENDING_SUPERVISOR`), reads it back, deletes it.
+  • Traces to: leave design §1; doc 7.2.
+- **Commit:** `feat: add leave request table`
+
+## Task 13 – Status/type constants + status chip *(High)*
+
+> One place says what the seven statuses and five leave types are and what
+> they look like, so no screen invents its own spelling.
+
+- **Goal:** `src/lib/leave.ts` exports the leave types and statuses with
+  their display names (doc 5.2 wording + "Withdrawn"), chip colours, and
+  the LR-5 transition table with `assertAllowedTransition(action, user,
+  request)`; `StatusChip` renders any status as a coloured pill **with the
+  status word always visible**.
+- **Files:** `src/lib/leave.ts`, `src/components/StatusChip.tsx`.
+- **Check:**
+  • A throwaway `npx tsx` snippet prints all 7 status labels and 5 type
+    labels — the doc 5.2 words plus "Withdrawn" (interview Q2), and the
+    doc 7.2 type names.
+  • `assertAllowedTransition` accepts the 7 legal transitions and throws on
+    an illegal one (e.g. Sign from `SIGNED`).
+  • `npm run lint` clean.
+  • Traces to: leave design §1, LR-5.
+- **Commit:** `feat: add leave statuses and types`
+
+## Task 14 – Employee leave form + submit checks *(High)*
+
+> The heart of FR-02: the paper form becomes a screen, and every rule in
+> LR-1…LR-4 is checked on the server before a row exists.
+
+- **Goal:** `/employee/leave/new` renders the form from leave design §4
+  (type select, conditional "what is it for" field, start/end dates,
+  supervisor dropdown of own-division supervisors) with the inline confirm
+  step; `createLeaveRequest` refuses non-employees, wrong-division or
+  wrong-role supervisor ids, end-before-start, missing description on
+  Other or Compassionate leave, and overlapping dates — and on success redirects to
+  `/employee?done=submitted` with the green banner.
+- **Files:** `src/app/employee/leave/new/page.tsx`,
+  `src/app/employee/leave/new/actions.ts`, `src/components/SuccessBanner.tsx`,
+  `src/app/employee/page.tsx` (banner hook), `tests/leave-submit.test.ts`.
+- **Check:**
+  • AC-14 (form side), AC-15, AC-16, AC-17, AC-18, AC-29 as written.
+  • The saved row in `prisma studio` has the right fields and
+    `PENDING_SUPERVISOR`; tampering the hidden supervisor id to an
+    out-of-division user id is refused (AC-31 part).
+  • Traces to: U12, U13, U22, U23; LR-1 … LR-4; FR-02.
+- **Commit:** `feat: employee leave request form`
+
+## Task 15 – Employee's own list on `/employee` *(High)*
+
+> Goal 1 and 3: the employee can finally answer "where is my request?"
+
+- **Goal:** The `/employee` placeholder becomes the employee's own request
+  list, newest first, using the query-scoped rules of LR-11 — status chips,
+  remarks where present, rows linking to the (not yet built) detail page,
+  and a "New request" button.
+- **Files:** `src/app/employee/page.tsx`, `src/components/RequestList.tsx`,
+  `tests/leave-list.test.ts`.
+- **Check:**
+  • AC-14 (list side), AC-26 (employee part): only `employee-1`'s own rows;
+    empty-state message when there are none.
+  • Status words render exactly as the doc 5.2 names.
+  • Traces to: U18; LR-11; FR-06.
+- **Commit:** `feat: employee leave list`
+
+## Task 16 – Request detail page + access matrix *(High)*
+
+> One page shows a whole request, and only the people who should see it
+> can. Actions render here in later tasks; nobody acts yet.
+
+- **Goal:** `/requests/[id]` shows the full record (type and description,
+  dates, status chip, submitted/signed/decided/withdrawn dates, both
+  remarks, deciding officer). The LR-12 matrix runs on the server before
+  render: owner, named supervisor, HR, Admin pass; everyone else is
+  redirected to their own home. `ConfirmAction` (button → inline confirm
+  row with optional remark field) is built and used by nothing yet.
+- **Files:** `src/app/requests/[id]/page.tsx`,
+  `src/components/ConfirmAction.tsx`, `tests/leave-detail.test.ts`,
+  `src/proxy.ts` (route matchers).
+- **Check:**
+  • AC-26 (detail view), AC-31: signed-out → `/login`; `supervisor-2`
+    opening a request naming *Supervisor 1* → denied to their own home.
+  • With no actions built yet, no page shows an action button.
+  • Traces to: U18; LR-12; AC-31 (FR-10).
+- **Commit:** `feat: leave request detail page`
+
+## Task 17 – Withdraw *(High)*
+
+> The escape hatch from interview Q2, and the key that frees blocked dates.
+
+- **Goal:** The owner can withdraw their own `PENDING_SUPERVISOR` request
+  from the detail page, behind the confirm step, with a success banner;
+  status `Withdrawn` + `withdrawnAt`; the dates become reusable (LR-4);
+  a `SIGNED` request offers no Withdraw button.
+- **Files:** `src/app/requests/[id]/actions.ts` (`withdraw`),
+  `src/app/requests/[id]/page.tsx`, `tests/leave-withdraw.test.ts`.
+- **Check:**
+  • AC-25 and AC-18 exactly as written; AC-28 (withdraw row).
+  • A POST of `withdraw` by a non-owner, by HR, or on a `SIGNED` request is
+    refused by the server.
+  • Traces to: U21, U22; LR-4, LR-8, LR-14.
+- **Commit:** `feat: withdraw pending leave request`
+
+## Task 18 – Supervisor list on `/supervisor` *(High)*
+
+> The supervisor's "waiting for me" list — paper's "sign it" pile.
+
+- **Goal:** `/supervisor` lists the requests where `supervisorId = me`,
+  pending on top, history below, with status and remarks (LR-11).
+- **Files:** `src/app/supervisor/page.tsx`, `tests/leave-supervisor-list.test.ts`.
+- **Check:**
+  • AC-26 (supervisor part): `supervisor-1` never sees a request naming
+    *Supervisor 2*, and vice versa.
+  • Traces to: U18; LR-11; FR-06.
+- **Commit:** `feat: supervisor leave list`
+
+## Task 19 – Supervisor signs or rejects *(High)*
+
+> FR-03: the decision that moves the request forward — or ends it.
+
+- **Goal:** On the detail page the named supervisor can **Sign** or
+  **Reject** (remark required for rejection, absent for signing), each
+  behind the confirm step with a success banner; both actions re-read the
+  row and enforce the from-status (LR-5, LR-6).
+- **Files:** `src/app/requests/[id]/actions.ts` (`sign`,
+  `rejectBySupervisor`), `src/app/requests/[id]/page.tsx`,
+  `tests/leave-supervisor-decide.test.ts`.
+- **Check:**
+  • AC-19, AC-20, AC-28 (sign/reject rows).
+  • Empty remark on reject is refused before any write; `sign` by the
+    employee or another supervisor is refused; `sign` on an already-`SIGNED`
+    request is refused.
+  • Traces to: U14; LR-5, LR-6; FR-03.
+- **Commit:** `feat: supervisor sign or reject`
+
+## Task 20 – Send to HR *(High)*
+
+> FR-04: the employee's last mile — from signed to the HR queue.
+
+- **Goal:** On a `SIGNED` request the owner can **Send to HR** behind the
+  confirm step; status becomes `PENDING_HR` with a success banner; the
+  shared HR query now includes it.
+- **Files:** `src/app/requests/[id]/actions.ts` (`sendToHr`),
+  `src/app/requests/[id]/page.tsx`, `tests/leave-send-hr.test.ts`.
+- **Check:**
+  • AC-21 as written (queue half is confirmed in Task 21).
+  • Sending by a non-owner, or from any status other than `SIGNED`, is
+    refused.
+  • Traces to: U15; LR-5, LR-7; FR-04.
+- **Commit:** `feat: send signed request to HR`
+
+## Task 21 – HR shared queue on `/hr` *(High)*
+
+> HR's single list of requests waiting for a decision — the third paper
+> problem, gone.
+
+- **Goal:** `/hr` shows status in {`PENDING_HR`, `APPROVED`,
+  `REJECTED_HR`}, pending first and decided below with the deciding
+  officer's name (LR-11). Both officers see the identical list (Q5).
+- **Files:** `src/app/hr/page.tsx`, `tests/leave-hr-queue.test.ts`.
+- **Check:**
+  • AC-21 (both officers see a freshly sent request), AC-27.
+  • Requests still `PENDING_SUPERVISOR`/`SIGNED` do not appear.
+  • Traces to: U18, U19; LR-11; FR-05, FR-06.
+- **Commit:** `feat: HR shared queue`
+
+## Task 22 – HR decides + first decision wins *(High)*
+
+> FR-05 plus interview Q4: real decisions, recorded officer, and no
+> silent overwrites between the two officers.
+
+- **Goal:** Any HR officer can **Approve** or **Reject** (remark required)
+  a `PENDING_HR` request from the detail page, behind the confirm step.
+  The action records `hrOfficerId` and `decidedAt`, re-reads the row
+  inside the transaction, and refuses a late second officer with "already
+  decided by <name> (<status>)".
+- **Files:** `src/app/requests/[id]/actions.ts` (`approve`, `rejectByHr`),
+  `src/app/requests/[id]/page.tsx`, `tests/leave-hr-decide.test.ts`.
+- **Check:**
+  • AC-22, AC-23, AC-24, AC-28 (decide rows) exactly as written.
+  • Empty remark on reject refused; `approve` POSTed by an employee,
+    supervisor or Admin is refused; a second decision on a final request is
+    refused and changes nothing in the database.
+  • Traces to: U16, U17; LR-5, LR-9, LR-10; FR-05.
+- **Commit:** `feat: HR approve or reject`
+
+## Task 23 – Admin table (view only) *(Medium)*
+
+> FR-08 and doc 5.3 rule 6: the admin sees every record and touches none.
+
+- **Goal:** `/admin` lists every leave record — including
+  `PENDING_SUPERVISOR` and `SIGNED` ones that never reached HR — with
+  employee, supervisor, dates, type, status chip, and deciding officer.
+  No buttons anywhere (LR-13).
+- **Files:** `src/app/admin/page.tsx`, `tests/leave-admin.test.ts`.
+- **Check:**
+  • AC-30 as written; a transition action POSTed while signed in as Admin
+    is refused.
+  • Traces to: U25; LR-11, LR-13; FR-08.
+- **Commit:** `feat: admin leave records table`
+
+## Task 24 – Full pass against the leave checklist *(High)*
+
+> The doc's step 6 ("Check") for this module: walk every leave AC by hand
+> and prove the security checks bite.
+
+- **Goal:** All 18 leave checks (AC-14 … AC-31) pass on a fresh database,
+  the `tests/leave-*.test.ts` suite passes, and lint is clean.
+- **Files:** none new — fix whatever fails (spec first if behaviour was
+  wrong).
+- **Check:**
+  • Delete the SQLite file, re-run Task 12's migration and `npm run db:seed`,
+    sign in with the demo accounts, and walk AC-14 … AC-31 top to bottom,
+    ticking each "To do" to Done.
+  • `npm run lint` reports no errors.
+  • Traces to: FR-02 … FR-08, FR-10; the whole of the leave requirements §4.
+- **Commit:** `test: leave request acceptance pass`

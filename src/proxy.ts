@@ -28,7 +28,15 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(home, request.url))
   }
 
-  if (pathname === '/' || pathname !== home) {
+  // Own home, own nested routes (e.g. /employee/leave/new) and the shared
+  // /requests/[id] pages pass the optimistic check; the page-level
+  // requireRole/LR-12 check is the real control (design §2 rule 8).
+  // Everything else — '/' and any role's pages — bounces to their home.
+  const allowed =
+    pathname === home ||
+    pathname.startsWith(`${home}/`) ||
+    pathname.startsWith('/requests/')
+  if (pathname === '/' || !allowed) {
     return NextResponse.redirect(new URL(home, request.url))
   }
   return NextResponse.next()
@@ -36,5 +44,15 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Only the auth-relevant routes — never /_next/static or public assets.
-  matcher: ['/', '/login', '/employee', '/supervisor', '/hr', '/admin'],
+  // Nested home paths and /requests/:path* join the home pages (Task 16);
+  // the matcher stays optimistic-only.
+  matcher: [
+    '/',
+    '/login',
+    '/employee/:path*',
+    '/supervisor/:path*',
+    '/hr/:path*',
+    '/admin/:path*',
+    '/requests/:path*',
+  ],
 }
