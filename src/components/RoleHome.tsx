@@ -1,6 +1,7 @@
 // The shared stub home for all four roles (docs/specs/02-design.md §4 +
 // Visual design): same shell as /login — soft grey background, centred
 // rounded card, wordmark header, outline "Log out" pill.
+import type { ReactNode } from 'react'
 import type { CurrentUser } from '@/lib/auth'
 import { logout } from '@/app/login/actions'
 import { keepAlive } from '@/app/actions/session'
@@ -13,7 +14,15 @@ const ROLE_LABEL: Record<string, string> = {
   ADMIN: 'Admin',
 }
 
-export function RoleHome({ user }: { user: CurrentUser }) {
+export function RoleHome({
+  user,
+  banner,
+  children,
+}: {
+  user: CurrentUser
+  banner?: ReactNode
+  children?: ReactNode
+}) {
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#eef0ee] px-4 py-10">
       <div aria-hidden className="pointer-events-none absolute inset-0">
@@ -45,6 +54,7 @@ export function RoleHome({ user }: { user: CurrentUser }) {
         </header>
 
         <section className="mt-10">
+          {banner}
           <h1 className="text-2xl font-medium text-[#1f2937]">{user.name}</h1>
           <dl className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="rounded-2xl border border-[#dfe3df] bg-white p-5">
@@ -72,9 +82,11 @@ export function RoleHome({ user }: { user: CurrentUser }) {
               </dd>
             </div>
           </dl>
-          <p className="mt-8 rounded-2xl border border-dashed border-[#dfe3df] bg-white p-5 text-sm text-[#6b7280]">
-            Leave requests come in the next task.
-          </p>
+          {children ?? (
+            <p className="mt-8 rounded-2xl border border-dashed border-[#dfe3df] bg-white p-5 text-sm text-[#6b7280]">
+              Leave requests come in the next task.
+            </p>
+          )}
         </section>
       </div>
     </main>
