@@ -10,8 +10,8 @@
 
 ## 1. Tables
 
-The login module needs one table. Leave-request tables arrive with the leave
-module's own design spec.
+The login module needs one table. The leave-request table lives in the Leave
+Request design part below.
 
 ### `User` – one row per person who can log in
 
@@ -235,3 +235,219 @@ is `password123`, stored hashed:
 | `hr-1@budiman.com` | HR 1 | 00-175555 | HR | Human Resources | HR Officer |
 | `hr-2@budiman.com` | HR 2 | 00-184444 | HR | Human Resources | HR Officer |
 | `admin@budiman.com` | Admin | 00-193333 | ADMIN | Admin | Admin Manager |
+
+---
+
+# Leave Request – Design
+
+> **This file answers:** How is the leave flow put together? (data, rules,
+> screens, where the code lives)
+> **Who:** The AI drafted it from the Leave Request part of
+> `01-requirements.md`, the HRMS doc, and the interview. You review all of it.
+>
+> If this part and the Leave Request requirements disagree, fix the
+> requirements first, then this part.
+
+## 1. Tables
+
+### `LeaveRequest` – one row per request (doc 7.2)
+
+| Field | Type | Required? | What it holds |
+|-------|------|-----------|---------------|
+| `id` | number | auto | Unique number for the row |
+| `employeeId` | number | yes | The user asking for leave — links to `User.id` |
+| `supervisorId` | number | yes | The user who must sign — links to `User.id`; same division, role SUPERVISOR (LR-2) |
+| `leaveType` | text | yes | One of the five codes in Reference C (doc 7.2) |
+| `otherLeaveType` | text | no | What the leave is for; required when the type is `OTHER` — and also when it is `COMPASSIONATE` (doc 7.2 leave types: "the employee must write what is for") |
+| `startDate` | date | yes | First day of leave; past dates allowed (LR-3) |
+| `endDate` | date | yes | Last day of leave; never before `startDate` |
+| `status` | text | yes | One of the seven values below — set by the server only, never taken from the browser |
+| `supervisorRemark` | text | no | Supervisor's reason; required when rejecting (LR-6) |
+| `hrOfficerId` | number | no | The HR user who decided — links to `User.id`; set on Approved / Rejected by HR |
+| `hrRemark` | text | no | HR's reason; required when HR rejects (LR-9) |
+| `submittedAt` | date | auto | Set when the request is created |
+| `signedAt` | date | no | When the supervisor signed |
+| `decidedAt` | date | no | When HR decided |
+| `withdrawnAt` | date | no | When the employee withdrew |
+
+Like `User.role` in the login part, `status` and `leaveType` are plain
+strings in SQLite (SQLite has no enum); the allowed values live in
+`src/lib/leave.ts` and every write goes through the server checks below.
+Dates come from `<input type="date">`, are stored as DateTime (midnight
+UTC), and display as "1 Dec 2026".
+
+**Statuses** — doc 5.2's six, plus Withdrawn (interview Q2):
+
+| Stored value | Display name | Meaning | Final? | Set by |
+|--------------|--------------|---------|--------|--------|
+| `PENDING_SUPERVISOR` | Pending supervisor | Submitted, waiting for the supervisor | no | System (on submit) |
+| `SIGNED` | Signed | Supervisor signed; employee can send it to HR | no | Named supervisor |
+| `PENDING_HR` | Pending HR | Sent to HR, waiting for a decision | no | Employee (owner) |
+| `APPROVED` | Approved | HR approved it | yes | Any HR officer |
+| `REJECTED_SUPERVISOR` | Rejected by supervisor | Supervisor rejected, remark stored | yes | Named supervisor |
+| `REJECTED_HR` | Rejected by HR | HR rejected, remark stored | yes | Any HR officer |
+| `WITHDRAWN` | Withdrawn | Employee withdrew while still pending | yes | Employee (owner) |
+
+**Reference C. Leave types** (doc 7.2): `ANNUAL` Annual leave · `MATERNITY`
+Maternity leave · `UNPAID` Unpaid leave · `COMPASSIONATE` Compassionate
+leave (family emergency or bereavement — requires `otherLeaveType`) ·
+`OTHER` Other (requires `otherLeaveType`).
+
+## 2. Business rules (leave)
+
+Numbered **LR-n** so they never get confused with the login rules 1–10.
+
+1. **LR-1. Employees only create.** The create action requires the session
+   user's role to be `EMPLOYEE`; supervisors, HR and Admin cannot create a
+   request by any route (doc 5.3 rule 2, U12).
+2. **LR-2. The supervisor is verified on the server.** The submitted
+   `supervisorId` must reference a user with role `SUPERVISOR` in the same
+   division as the submitting employee, or the action is refused — the
+   dropdown is convenience, never the check (U13).
+3. **LR-3. Form rules.** `leaveType` must be one of Reference C;
+   `otherLeaveType` is required when the type is `OTHER` (doc 7.2 field
+   table) or `COMPASSIONATE` (doc 7.2 leave types: "the employee must
+   write what is for"); dates are real and `endDate` ≥ `startDate`; past
+   dates are allowed — no other date policy (U12, U23, interview Q6).
+4. **LR-4. No double-booking** (interview Q3). Before insert, the employee
+   must have no request in status `PENDING_SUPERVISOR`, `SIGNED`,
+   `PENDING_HR` or `APPROVED` whose dates overlap inclusively
+   (`newStart ≤ existingEnd AND newEnd ≥ existingStart`). Refusal names the
+   existing request's dates. `WITHDRAWN` and the two rejections free the
+   dates (U22).
+5. **LR-5. One status machine, enforced in code.** Every action declares
+   who may do it, from which status, to which status — and the server
+   **re-reads the row inside the action** and refuses if the status has
+   moved on (interview Q4). The late officer gets "already decided by
+   <name> (<status>)" and never overwrites the first decision.
+
+   | Action | Who | From status | To status |
+   |--------|-----|-------------|-----------|
+   | Submit | Owner | — (new row) | `PENDING_SUPERVISOR` |
+   | Sign | Named supervisor | `PENDING_SUPERVISOR` | `SIGNED` (+`signedAt`) |
+   | Reject | Named supervisor, remark required | `PENDING_SUPERVISOR` | `REJECTED_SUPERVISOR` |
+   | Withdraw | Owner | `PENDING_SUPERVISOR` | `WITHDRAWN` (+`withdrawnAt`) |
+   | Send to HR | Owner | `SIGNED` | `PENDING_HR` |
+   | Approve | Any HR officer | `PENDING_HR` | `APPROVED` (+`hrOfficerId`, `decidedAt`) |
+   | Reject | Any HR officer, remark required | `PENDING_HR` | `REJECTED_HR` (+`hrOfficerId`, `hrRemark`, `decidedAt`) |
+
+6. **LR-6. Sign carries no remark; supervisor rejection does.** The named
+   supervisor only can do either; an empty remark is refused before the
+   write (FR-03, U14).
+7. **LR-7. Sending to HR is the owner's move,** allowed only from `SIGNED`
+   (doc 5.3 rule 5, FR-04). It puts the request in the shared HR queue.
+8. **LR-8. Withdrawal is the owner's move,** allowed only from
+   `PENDING_SUPERVISOR` (interview Q2). `Withdrawn` has no other path in,
+   and no path out.
+9. **LR-9. HR decides either way;** rejection requires a non-empty
+   `hrRemark`; the deciding officer and `decidedAt` are recorded (FR-05,
+   doc 5.3 rule 5).
+10. **LR-10. Decided means done.** Final statuses accept no further action
+    (doc 5.2 "Final"); a rejected employee submits a fresh request — no
+    reopen, no appeal (U24).
+11. **LR-11. Lists are scoped by the query, not the browser.** Employee
+    list: `employeeId = me`. Supervisor list: `supervisorId = me`. HR list
+    (shared, both officers identical, interview Q5): status in `PENDING_HR`,
+    `APPROVED`, `REJECTED_HR` — pending first, decided below with the
+    officer's name. Admin: every row (FR-06, FR-08).
+12. **LR-12. Detail page access matrix.** `/requests/[id]` may be opened by
+    exactly: the owner, the named supervisor, any HR officer, and Admin.
+    Anyone else is redirected to their own home — the check runs in server
+    code before anything renders (OWASP A01, AC-31). Action buttons render
+    only for the viewer/status combinations LR-5 allows; hiding is display
+    polish, the server re-check is the control.
+13. **LR-13. Admin never acts.** No action is written for ADMIN; one
+    POSTed anyway is refused.
+14. **LR-14. Confirm, then success** (FR-07). Every action shows an inline
+    confirm step first (nothing happens until "Confirm"; remark fields sit
+    inside the confirm row when required), then redirects with a green
+    success banner naming the action ("Request submitted", "Sent to HR",
+    …). Browser `confirm()` popups are not used.
+15. **LR-15. Nothing is deleted.** Withdrawn and rejected requests stay in
+    their role's list with status and remark, forever (goal 3, U18).
+
+## 3. Technology (leave additions)
+
+Everything stays as the login part's §3 — Next.js 16 server actions, Prisma,
+Tailwind, the signed session cookie and `requireRole()`; **no new
+dependencies** (`package.json` is pinned). The module adds one constants
+file (`src/lib/leave.ts`) as the single source for types, statuses, labels
+and the LR-5 transition table, and `<input type="date">` fields for dates.
+
+## 4. Screens (routes) — leave module
+
+| Route | Who | What it shows | Status |
+|-------|-----|---------------|--------|
+| `/employee` (extended) | `EMPLOYEE` | RoleHome shell + own request list, newest first, with status chip and remarks, a "New request" button, and success banners (replaces the "leave requests come in the next task" placeholder) | To do |
+| `/employee/leave/new` | `EMPLOYEE` | The leave form: type select; "what the leave is for" text (shown for Other and Compassionate leave); start/end date fields; supervisor select listing own-division supervisors; validation errors above the form; inline confirm step before submit | To do |
+| `/supervisor` (extended) | `SUPERVISOR` | Own list: requests naming them, pending on top, history below with status and remarks | To do |
+| `/hr` (extended) | `HR` | The shared queue (LR-11): Pending HR first, decided below with the deciding officer's name — identical for both officers | To do |
+| `/admin` (extended) | `ADMIN` | Every leave record in one table — employee, supervisor, dates, type, status, decider — no buttons anywhere (FR-08) | To do |
+| `/requests/[id]` | Owner · named supervisor · HR · Admin | Full record: type and description, dates, status chip, submitted/signed/decided/withdrawn dates, both remarks, deciding officer. Renders only the action buttons this viewer may use at this status (LR-5), each behind the inline confirm | To do |
+
+The RoleHome shell, palette, cards and pill buttons are the login part's
+visual design unchanged; new pieces are the list rows and small **status
+chips**. Chip colours (Pending supervisor `#b45309` amber, Signed and
+Pending HR `#1d4ed8` blue, Approved `#23a55a` green, Rejected `#b91c1c`
+red, Withdrawn `#6b7280` grey) are decoration — the status **word** always
+shows next to the colour.
+
+`src/proxy.ts` matchers grow to cover the new routes for the quick
+signed-out redirect; the real check stays `requireRole()` + the per-action
+server checks, exactly as the login part's rule 8 established.
+
+## 5. Where the code lives (leave module)
+
+| Folder / file | What's in it |
+|---------------|--------------|
+| `prisma/schema.prisma` | `LeaveRequest` model (this part's §1) with relations to `User` |
+| `src/lib/leave.ts` | `LEAVE_TYPES`, `STATUSES`, display labels, chip colours, and the LR-5 transition table + `assertAllowedTransition()` used by every action |
+| `src/components/StatusChip.tsx` | Status word in a coloured pill |
+| `src/components/RequestList.tsx` | The shared list/table of requests (rows link to the detail page); each home page passes its role-scoped rows |
+| `src/components/SuccessBanner.tsx` | Green banner driven by a `?done=<action>` redirect param |
+| `src/components/ConfirmAction.tsx` | Client piece: button → inline confirm row (remark field when the action needs one) → posts the server action |
+| `src/app/employee/page.tsx` | Own list + "New request" button (replaces the stub body) |
+| `src/app/employee/leave/new/page.tsx` | The leave form |
+| `src/app/employee/leave/new/actions.ts` | `createLeaveRequest` — LR-1 … LR-4 |
+| `src/app/requests/[id]/page.tsx` | Detail page + LR-12 access matrix |
+| `src/app/requests/[id]/actions.ts` | `withdraw`, `sign`, `rejectBySupervisor`, `sendToHr`, `approve`, `rejectByHr` — LR-5 … LR-10 |
+| `src/app/supervisor/page.tsx` | Supervisor queue list (replaces stub) |
+| `src/app/hr/page.tsx` | HR shared queue (replaces stub) |
+| `src/app/admin/page.tsx` | Admin table, view only (replaces stub) |
+| `src/proxy.ts` | Extended route matchers — optimistic redirect only, as before |
+| `tests/leave-*.test.ts` | Black-box tests following the existing `tests/` convention (node:test against the dev server) |
+
+## 6. Security (leave module, OWASP Top 10 — FR-10)
+
+- **Every action checks four things on the server, in order:** a valid
+  session (login part's rules), the right role, the right row (owner /
+  named supervisor / HR), and the required current status — re-read inside
+  the action, so a stale screen can never overwrite a decision (LR-5,
+  interview Q4).
+- **The browser sends intent, never facts.** Transition forms (sign,
+  reject, withdraw, send, approve) carry the request id and an optional
+  remark only — `status`, `hrOfficerId`, and `employeeId` are never taken
+  from input. The create form's `supervisorId` is re-verified on the server
+  against division and role (LR-2), so a tampered dropdown is refused.
+- **No IDOR:** the detail access matrix (LR-12) and query-scoped lists
+  (LR-11) mean another person's request never reaches another person's
+  browser — not even hidden in HTML.
+- **Remarks and descriptions are text**, stored as text, rendered by React
+  (escaped by default); no raw SQL anywhere — all queries go through
+  Prisma's parameterised API (OWASP A03).
+- **Forms are server actions** → CSRF protection by default, matching the
+  login part; there are no hand-rolled API routes.
+- **Error messages stay minimal** ("This action is not allowed",
+  "already decided by HR 1") and only carry the detail a legitimately
+  involved viewer is entitled to.
+- Session lifetime, lockout and cookie flags are the login part's,
+  unchanged — this module adds no new way around them.
+
+## 7. Commands (additions)
+
+| Command | What it does |
+|---------|--------------|
+| `npx prisma migrate dev --name leave_request` | Create the `LeaveRequest` table (run once per developer) |
+
+`npm run dev`, `npm run lint` and `npm run db:seed` are unchanged; the demo
+users from Reference B are the leave module's test accounts too.
