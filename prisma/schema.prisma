@@ -1,0 +1,27 @@
+// Budiman HRMS — Leave Request module
+// Data model per docs/specs/02-design.md §1. Login module needs one table;
+// leave-request tables arrive with the leave module's design spec.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// One row per person who can log in (doc 7.2).
+model User {
+  id             Int       @id @default(autoincrement())
+  name           String
+  icNumber       String // Identity card number, format xx-xxxxxx
+  email          String    @unique // Work email, lowercased, @budiman.com
+  passwordHash   String // bcrypt hash — never the plain password
+  role           String // EMPLOYEE | SUPERVISOR | HR | ADMIN
+  division       String
+  designation    String
+  createdAt      DateTime  @default(now())
+  failedAttempts Int       @default(0) // wrong-password count (lockout, design §2 rule 5)
+  lockedUntil    DateTime? // when a lockout ends; null = not locked
+}

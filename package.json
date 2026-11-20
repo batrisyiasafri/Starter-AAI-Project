@@ -2,8 +2,12 @@
   "name": "hrms-leave-request-starter",
   "version": "0.1.0",
   "private": true,
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "scripts": {
     "dev": "next dev",
+    "db:seed": "prisma db seed",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
